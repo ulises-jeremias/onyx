@@ -63,6 +63,15 @@ const nextConfig = {
         }/build/sessions/:sessionId/webapp/_next/webpack-hmr`,
       },
       {
+        // WebSocket upgrades can't go through the App Router BFF
+        // (src/app/api/[...path]/route.ts is HTTP-only); proxy the terminal
+        // PTY socket straight to the backend like the webapp HMR socket above.
+        source: "/api/build/sessions/:sessionId/terminal",
+        destination: `${
+          process.env.INTERNAL_URL || "http://localhost:8080"
+        }/build/sessions/:sessionId/terminal`,
+      },
+      {
         source: "/ph_ingest/static/:path*",
         destination: "https://us-assets.i.posthog.com/static/:path*",
       },

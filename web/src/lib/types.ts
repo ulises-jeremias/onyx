@@ -163,6 +163,8 @@ export interface InvitedUserSnapshot {
 export interface MinimalUserSnapshot {
   id: string;
   email: string;
+  // User.personal_name when set; UI falls back to email
+  personal_name?: string | null;
 }
 
 export type ValidInputTypes =

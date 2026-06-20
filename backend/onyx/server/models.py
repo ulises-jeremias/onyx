@@ -30,6 +30,8 @@ class IdReturn(BaseModel):
 class MinimalUserSnapshot(BaseModel):
     id: UUID
     email: str
+    # User.personal_name when set; the UI falls back to email
+    personal_name: str | None = None
 
 
 class UserGroupInfo(BaseModel):

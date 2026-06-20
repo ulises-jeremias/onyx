@@ -173,6 +173,11 @@ async function refreshAgentShareCaches(agentId: number) {
   ]);
 }
 
+// Prefer the user's display name; fall back to email when unset
+function userDisplayName(user: MinimalUserSnapshot): string {
+  return user.personal_name ?? user.email;
+}
+
 interface StaticPermissionLabelProps {
   icon: IconFunctionComponent;
   label: string;
@@ -691,7 +696,10 @@ export default function ShareAgentModal({
 
         {agent?.owner ? (
           <ShareAccessRow
-            avatarInitial={agent.owner.email.charAt(0).toUpperCase()}
+            avatarInitial={userDisplayName(agent.owner).charAt(0).toUpperCase()}
+            description={
+              agent.owner.personal_name ? agent.owner.email : undefined
+            }
             icon={SvgUser}
             rightChildren={
               <StaticPermissionLabel
@@ -709,8 +717,8 @@ export default function ShareAgentModal({
             }
             title={
               currentUser && agent.owner.id === currentUser.id
-                ? `${agent.owner.email} (you)`
-                : agent.owner.email
+                ? `${userDisplayName(agent.owner)} (you)`
+                : userDisplayName(agent.owner)
             }
           />
         ) : null}
@@ -742,7 +750,12 @@ export default function ShareAgentModal({
 
           return (
             <ShareAccessRow
-              avatarInitial={share.user.email.charAt(0).toUpperCase()}
+              avatarInitial={userDisplayName(share.user)
+                .charAt(0)
+                .toUpperCase()}
+              description={
+                share.user.personal_name ? share.user.email : undefined
+              }
               icon={SvgUser}
               key={share.user.id}
               rightChildren={
@@ -767,7 +780,9 @@ export default function ShareAgentModal({
                 />
               }
               title={
-                isCurrentUser ? `${share.user.email} (you)` : share.user.email
+                isCurrentUser
+                  ? `${userDisplayName(share.user)} (you)`
+                  : userDisplayName(share.user)
               }
             />
           );

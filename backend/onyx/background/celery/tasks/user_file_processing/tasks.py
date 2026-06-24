@@ -49,6 +49,8 @@ from onyx.document_index.factory import get_all_document_indices
 from onyx.document_index.interfaces_new import MetadataUpdateRequest
 from onyx.document_index.vespa_constants import DOCUMENT_ID_ENDPOINT
 from onyx.file_store.file_store import get_default_file_store
+from onyx.file_store.staging import build_tracking_raw_file_callback
+from onyx.file_store.staging import delete_files_best_effort
 from onyx.file_store.utils import store_user_file_plaintext
 from onyx.file_store.utils import user_file_id_to_plaintext_file_name
 from onyx.httpx.httpx_pool import HttpxPool
@@ -490,6 +492,14 @@ def process_user_file_impl(
         )
         connector.load_credentials({})
 
+        # User files aren't attempt-scoped, so the docfetching staging reapers
+        # don't cover them. Track CSVs staged for tabular sections and reap them
+        # ourselves once indexing (which reads them) has run.
+        staging_callback, staged_csv_ids = build_tracking_raw_file_callback(
+            metadata={"user_file_id": str(user_file_id), "tenant_id": tenant_id}
+        )
+        connector.set_raw_file_callback(staging_callback)
+
         try:
             for batch in connector.load_from_state():
                 documents.extend(
@@ -526,6 +536,11 @@ def process_user_file_impl(
                     db_session.add(current_user_file)
                     db_session.commit()
             return
+        finally:
+            delete_files_best_effort(
+                staged_csv_ids,
+                context=f"user-file tabular staging cleanup uf={user_file_id}",
+            )
 
         elapsed = time.monotonic() - start
         task_logger.info(

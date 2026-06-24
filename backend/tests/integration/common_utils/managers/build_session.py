@@ -77,8 +77,6 @@ class BuildSessionManager:
         )
         response.raise_for_status()
         body = response.json()
-        # Endpoint returns ``SessionListResponse``; sessions live under
-        # the ``sessions`` key.
         if isinstance(body, dict) and "sessions" in body:
             sessions = body["sessions"]
             assert isinstance(sessions, list)

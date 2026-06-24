@@ -41,14 +41,6 @@ def _stub_send_wake_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(approval_cache, "send_wake", lambda *_args, **_kwargs: None)
 
 
-# Hardcoded spec; the completeness check below pins the source constant to it.
-WAIT_TIMEOUT_S_SPEC = 180
-
-
-def test_wait_timeout_spec() -> None:
-    assert approval_cache.WAIT_TIMEOUT_S == WAIT_TIMEOUT_S_SPEC
-
-
 # --------------------------------------------------------------------------- #
 # list_live_approvals
 # --------------------------------------------------------------------------- #

@@ -292,12 +292,12 @@ def test_list_directory_filters_hidden_entries(
 
 
 def test_cross_user_file_access_returns_404(
-    admin_user: DATestUser, basic_user: DATestUser
+    shared_session: tuple[DATestUser, UUID], admin_user: DATestUser
 ) -> None:
-    foreign_session_id = _create_session_id(basic_user)
+    _owner, session_id = shared_session
 
     response = client.get(
-        _files_url(foreign_session_id),
+        _files_url(session_id),
         headers=admin_user.headers,
         cookies=admin_user.cookies,
     )

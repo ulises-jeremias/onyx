@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
 from uuid import UUID
 
 from onyx.db.enums import SharingScope
@@ -18,19 +17,6 @@ from tests.integration.common_utils.managers.user import UserManager
 from tests.integration.common_utils.test_models import DATestLLMProvider
 from tests.integration.common_utils.test_models import DATestSettings
 from tests.integration.common_utils.test_models import DATestUser
-
-
-def _create_session(user: DATestUser) -> dict[str, Any]:
-    return BuildSessionManager.create(user)
-
-
-def _send_one_message(user: DATestUser, session_id: uuid.UUID) -> None:
-    BuildSessionManager.start_turn(
-        user,
-        session_id,
-        "hello",
-        client_request_id=f"session-list-{uuid.uuid4()}",
-    )
 
 
 def test_create_session_returns_200_with_session_and_sandbox_shape(
@@ -54,7 +40,7 @@ def test_set_sharing_scope_changes_webapp_visibility(
     basic_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_uuid = uuid.UUID(body["id"])
     webapp_url = f"{API_SERVER_URL}/build/sessions/{body['id']}/webapp"
 
@@ -82,7 +68,7 @@ def test_restore_session_returns_409_when_lock_held(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
     sandbox_id = body["sandbox"]["id"]
 
@@ -130,12 +116,22 @@ def test_list_sessions_only_returns_callers_interactive_sessions(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    mine = _create_session(admin_user)
-    _send_one_message(admin_user, uuid.UUID(mine["id"]))
+    mine = BuildSessionManager.create(admin_user)
+    BuildSessionManager.start_turn(
+        admin_user,
+        uuid.UUID(mine["id"]),
+        "hello",
+        client_request_id=f"session-list-{uuid.uuid4()}",
+    )
 
     other_user = UserManager.create(name=f"other-{uuid.uuid4().hex[:8]}")
-    theirs = _create_session(other_user)
-    _send_one_message(other_user, uuid.UUID(theirs["id"]))
+    theirs = BuildSessionManager.create(other_user)
+    BuildSessionManager.start_turn(
+        other_user,
+        uuid.UUID(theirs["id"]),
+        "hello",
+        client_request_id=f"session-list-{uuid.uuid4()}",
+    )
 
     sessions = BuildSessionManager.list_sessions(admin_user)
     ids = {s["id"] for s in sessions}
@@ -147,7 +143,7 @@ def test_delete_session_returns_204_and_actually_deletes(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
 
     response = client.delete(
@@ -169,7 +165,7 @@ def test_pre_provisioned_check_returns_valid_for_empty_session(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
 
     response = client.get(
@@ -187,10 +183,15 @@ def test_pre_provisioned_check_returns_invalid_after_first_message(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
 
-    _send_one_message(admin_user, uuid.UUID(session_id))
+    BuildSessionManager.start_turn(
+        admin_user,
+        uuid.UUID(session_id),
+        "hello",
+        client_request_id=f"session-list-{uuid.uuid4()}",
+    )
 
     response = client.get(
         f"{API_SERVER_URL}/build/sessions/{session_id}/pre-provisioned-check",
@@ -207,7 +208,7 @@ def test_rename_session_with_null_name_no_message_uses_id_fallback(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
 
     response = client.put(
@@ -225,7 +226,7 @@ def test_rename_session_with_null_name_falls_back_when_llm_call_fails(
     admin_user: DATestUser,
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
-    body = _create_session(admin_user)
+    body = BuildSessionManager.create(admin_user)
     session_id = body["id"]
 
     prompt = "hello"

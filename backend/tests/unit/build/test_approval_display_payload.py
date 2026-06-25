@@ -32,6 +32,7 @@ def _view(action_type: str, payload: dict[str, Any]) -> ApprovalView:
             )
         ],
         app_name="Gmail",
+        external_app_id=None,
         payload=payload,
         created_at=datetime.datetime.now(datetime.timezone.utc),
         decision=None,

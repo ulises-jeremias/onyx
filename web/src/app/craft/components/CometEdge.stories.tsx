@@ -58,6 +58,7 @@ const SKILL_CALL = toolCall({
 const SLACK_APPROVAL: ApprovalView = {
   approval_id: "appr-01HX3K9M4Q7W2",
   session_id: "sess-01HX3K9M4Q7W2",
+  external_app_id: null,
   actions: [
     {
       action_type: "slack.messages.write",

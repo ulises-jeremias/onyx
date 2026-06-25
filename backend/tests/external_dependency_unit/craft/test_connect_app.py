@@ -86,9 +86,9 @@ def test_connect_app_request_is_an_action_approval(
     assert decided is not None
     assert decided.decision == ApprovalDecision.APPROVED
     # No longer pending once resolved.
-    assert get_action_approval(db_session, row.approval_id).decision == (
-        ApprovalDecision.APPROVED
-    )
+    resolved = get_action_approval(db_session, row.approval_id)
+    assert resolved is not None
+    assert resolved.decision == ApprovalDecision.APPROVED
 
 
 def test_approve_connect_app_requests_resolves_pending(
@@ -120,10 +120,9 @@ def test_approve_connect_app_requests_resolves_pending(
         )
         == 1
     )
-    assert (
-        get_action_approval(db_session, row.approval_id).decision
-        == ApprovalDecision.APPROVED
-    )
+    resolved = get_action_approval(db_session, row.approval_id)
+    assert resolved is not None
+    assert resolved.decision == ApprovalDecision.APPROVED
     # Idempotent — nothing left pending to resolve.
     assert (
         approve_connect_app_requests(

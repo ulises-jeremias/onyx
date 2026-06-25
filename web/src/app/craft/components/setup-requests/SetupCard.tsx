@@ -43,9 +43,12 @@ export default function SetupCard({ approval, userApp }: SetupCardProps) {
   const [credModalOpen, setCredModalOpen] = useState(false);
 
   const mountedRef = useRef(true);
+  // Tears down the in-flight OAuth poll/listener; run on finish and on unmount.
+  const cleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     return () => {
       mountedRef.current = false;
+      cleanupRef.current?.();
     };
   }, []);
 
@@ -72,17 +75,8 @@ export default function SetupCard({ approval, userApp }: SetupCardProps) {
     }
   }
 
-  function awaitOAuthCompletion(popup: Window | null) {
+  function awaitOAuthCompletion(popup: Window) {
     let settled = false;
-    const finish = (connected: boolean) => {
-      if (settled) return;
-      settled = true;
-      window.removeEventListener("message", onMessage);
-      clearInterval(poll);
-      if (mountedRef.current) setBusy(false);
-      if (connected) void resolve("APPROVED");
-      else revalidate();
-    };
 
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
@@ -93,10 +87,25 @@ export default function SetupCard({ approval, userApp }: SetupCardProps) {
     }
 
     const poll = setInterval(() => {
-      if (popup && popup.closed) finish(false);
+      if (popup.closed) finish(false);
     }, POPUP_POLL_MS);
-
     window.addEventListener("message", onMessage);
+
+    const teardown = () => {
+      window.removeEventListener("message", onMessage);
+      clearInterval(poll);
+    };
+    cleanupRef.current = teardown;
+
+    function finish(connected: boolean) {
+      if (settled) return;
+      settled = true;
+      teardown();
+      cleanupRef.current = null;
+      if (mountedRef.current) setBusy(false);
+      if (connected) void resolve("APPROVED");
+      else revalidate();
+    }
   }
 
   async function connect() {
@@ -118,6 +127,13 @@ export default function SetupCard({ approval, userApp }: SetupCardProps) {
     try {
       const { authorize_url } = await startExternalAppOAuth(externalAppId);
       const popup = window.open(authorize_url, "_blank", POPUP_FEATURES);
+      if (!popup) {
+        setBusy(false);
+        setError(
+          "Couldn't open the setup window — allow popups and try again."
+        );
+        return;
+      }
       awaitOAuthCompletion(popup);
     } catch (e) {
       setBusy(false);

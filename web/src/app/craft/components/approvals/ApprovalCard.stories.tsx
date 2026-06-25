@@ -43,6 +43,7 @@ function approval(overrides: Partial<ApprovalView>): ApprovalView {
   const merged = {
     approval_id: "appr-01HX3K9M4Q7W2",
     session_id: "sess-01HX3K9M4Q7W2",
+    external_app_id: null,
     actions: [SLACK_POST_MESSAGE],
     app_name: "Slack",
     payload: {},

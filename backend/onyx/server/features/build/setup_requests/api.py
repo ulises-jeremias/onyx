@@ -63,7 +63,7 @@ class SetupStatusResponse(BaseModel):
     # request_id is None only when already connected (no approval was created).
     request_id: UUID | None
     status: SetupStatus
-    external_app_id: int
+    external_app_id: int | None
     app_name: str
 
 
@@ -174,6 +174,6 @@ def get_setup_request_status(
     return SetupStatusResponse(
         request_id=request_id,
         status=_status_from_decision(approval.decision),
-        external_app_id=approval.external_app_id or 0,
+        external_app_id=approval.external_app_id,
         app_name=approval.app_name,
     )

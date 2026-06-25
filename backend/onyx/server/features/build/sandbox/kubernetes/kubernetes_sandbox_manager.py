@@ -167,6 +167,8 @@ _PODTEMPLATE_NAME = "sandbox-pod"
 # Per-session egress tagging plugin, baked into the sandbox image (see
 # docker/Dockerfile). Path must match the COPY destination there.
 _OPENCODE_SESSION_TAG_PLUGIN_PATH = "/workspace/opencode-plugins/session-proxy-tag.ts"
+# Surfaces the `request_app_setup` tool; always on (independent of proxy tagging).
+_OPENCODE_APP_SETUP_PLUGIN_PATH = "/workspace/opencode-plugins/request-app-setup.ts"
 
 
 _PROXY_RESOLVE_RETRY_ATTEMPTS = 5
@@ -1108,7 +1110,10 @@ class KubernetesSandboxManager(SandboxManager):
                     default_provider=llm_config.provider,
                     default_model=llm_config.model_name,
                     disabled_tools=OPENCODE_DISABLED_TOOLS,
-                    plugins=[_OPENCODE_SESSION_TAG_PLUGIN_PATH],
+                    plugins=[
+                        _OPENCODE_SESSION_TAG_PLUGIN_PATH,
+                        _OPENCODE_APP_SETUP_PLUGIN_PATH,
+                    ],
                 )
             )
             self._provision_opencode_secret(str(sandbox_id), opencode_config_json)

@@ -10,7 +10,8 @@ in the user's connected apps. Use all available resources to best accomplish the
 ## Hard rules
 
 - **Never** ask the user for API keys, tokens, or secrets, and never read credentials from
-  the environment. The network egress proxy injects these for you.
+  the environment. The network egress proxy injects these for you. To enable an app the user
+  hasn't connected yet, call the `request_app_setup` tool — never collect credentials yourself.
 - **Never** bypass the egress proxy — no raw sockets, own DNS, hardcoded IPs, or unsetting
   the `*_PROXY` vars. Non-proxy traffic is silently dropped.
 - **Never** retry a gated external action that returned HTTP 403 (`user_rejected` /

@@ -57,7 +57,9 @@ def ensure_sandbox_pat(db_session: Session, sandbox: Sandbox, user: User) -> str
         name=f"craft-{user.id}",
         expiration_days=_PAT_EXPIRATION_DAYS,
         pat_type=PatType.CRAFT,
-        scopes=[Permission.READ_SEARCH],
+        # READ_SEARCH powers company-search; BASIC_ACCESS lets the sandbox reach
+        # /build callbacks (e.g. request_app_setup) that the agent invokes.
+        scopes=[Permission.READ_SEARCH, Permission.BASIC_ACCESS],
     )
 
     sandbox.encrypted_pat = raw_token  # ty: ignore[invalid-assignment]

@@ -184,6 +184,8 @@ _PROXY_CA_BUNDLE_FILE = f"{_PROXY_CA_BUNDLE_DIR}/ca-bundle.crt"
 # Registered in the opencode config only when the proxy is wired up; otherwise
 # it would no-op (no HTTP(S)_PROXY to re-tag).
 _OPENCODE_SESSION_TAG_PLUGIN_PATH = "/workspace/opencode-plugins/session-proxy-tag.ts"
+# Surfaces the `request_app_setup` tool; always on (independent of proxy tagging).
+_OPENCODE_APP_SETUP_PLUGIN_PATH = "/workspace/opencode-plugins/request-app-setup.ts"
 _MUTABLE_SANDBOX_IMAGE_TAGS = {"latest", "beta", "edge"}
 
 # In-container opencode-history archive builder: reuses the sandbox_daemon
@@ -895,9 +897,9 @@ class DockerSandboxManager(SandboxManager):
             # Only register the egress-tagging plugin when the proxy is wired
             # up; otherwise it would no-op (no HTTP(S)_PROXY to re-tag). Mirrors
             # the K8s manager's gating.
-            session_tag_plugins = (
-                [_OPENCODE_SESSION_TAG_PLUGIN_PATH] if SANDBOX_PROXY_HOST else None
-            )
+            plugins = [_OPENCODE_APP_SETUP_PLUGIN_PATH]
+            if SANDBOX_PROXY_HOST:
+                plugins.append(_OPENCODE_SESSION_TAG_PLUGIN_PATH)
             # Proxy posture: Real PAT + LLM api_key never enter the sandbox. The
             # proxy reads `Sandbox.encrypted_pat` and the per-provider key from
             # Postgres, swaps the placeholder for the real bearer on the wire
@@ -914,7 +916,7 @@ class DockerSandboxManager(SandboxManager):
                     default_provider=llm_config.provider,
                     default_model=llm_config.model_name,
                     disabled_tools=OPENCODE_DISABLED_TOOLS,
-                    plugins=session_tag_plugins,
+                    plugins=plugins,
                 )
             )
             self._ensure_sandbox_image()

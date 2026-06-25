@@ -10,6 +10,7 @@ import { SvgPlug } from "@opal/icons";
 import { CRAFT_APPS_PATH } from "@/app/craft/v1/constants";
 import { SWR_KEYS } from "@/lib/swr-keys";
 import { completeExternalAppOAuthCallback } from "@/app/craft/services/externalAppsService";
+import { OAUTH_POPUP_MESSAGE_SOURCE } from "@/app/craft/types/setupRequests";
 
 type Status = "exchanging" | "success" | "error";
 
@@ -43,9 +44,25 @@ export default function ExternalAppsOAuthCallbackPage() {
 
     async function exchange() {
       try {
-        await completeExternalAppOAuthCallback(code!, state!);
+        const { external_app_id } = await completeExternalAppOAuthCallback(
+          code!,
+          state!
+        );
         setStatus("success");
         await globalMutate(SWR_KEYS.buildExternalApps);
+        // Launched from the in-chat SetupCard popup: notify the opener so it can
+        // resolve the request, then close — don't navigate away from Craft.
+        if (window.opener) {
+          window.opener.postMessage(
+            {
+              source: OAUTH_POPUP_MESSAGE_SOURCE,
+              externalAppId: external_app_id,
+            },
+            window.location.origin
+          );
+          window.close();
+          return;
+        }
         setTimeout(() => router.push(CRAFT_APPS_PATH as Route), 800);
       } catch (e) {
         setStatus("error");

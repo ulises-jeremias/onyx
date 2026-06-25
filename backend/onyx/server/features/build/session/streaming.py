@@ -268,8 +268,10 @@ def merge_events_with_announces(
     """Merge sandbox events and approval announces into one stream.
 
     Two producer threads feed a shared queue: the sandbox-event iterator, and a
-    BLPOP poller that emits `ApprovalRequestedPacket` when the proxy
-    signals a new approval. Announce latency is bounded by the 1s BLPOP.
+    BLPOP poller that emits `ApprovalRequestedPacket` when the proxy signals a
+    new approval. Announce latency is bounded by the 1s BLPOP. Connect-app
+    requests ride the same approval announce/wake channel (they are
+    `ActionApproval` rows), so no separate poller is needed.
     """
     output: queue_lib.Queue[Any] = queue_lib.Queue()
     stop = threading.Event()

@@ -24,9 +24,13 @@ from onyx.external_apps.providers.base import OAuthExternalAppProvider
 from onyx.external_apps.providers.registry import get_provider_or_raise
 from onyx.external_apps.token_utils import stamp_expires_at
 from onyx.redis.redis_pool import get_redis_client
+from onyx.server.features.build.approvals.connect_app import (
+    approve_connect_app_requests,
+)
 from onyx.server.features.build.external_apps.models import OAuthCallbackRequest
 from onyx.server.features.build.external_apps.models import OAuthCallbackResponse
 from onyx.server.features.build.external_apps.models import OAuthStartResponse
+from onyx.skills.push import push_skills_for_users
 from onyx.utils.logger import setup_logger
 from shared_configs.contextvars import get_current_tenant_id
 
@@ -238,6 +242,15 @@ def handle_external_app_oauth_callback(
         user_id=user.id,
         user_credentials=stored_credentials,
     )
+
+    # Authenticating opens this user's per-user gate; refresh their sandboxes so
+    # the now-usable skill bundle lands (parity with the credentials endpoint).
+    push_skills_for_users({user.id}, db_session)
+
+    # Resume any agent parked on a connect-app request for this app — authoritative
+    # on the credential being written, not on the frontend popup's completion message.
+    approve_connect_app_requests(db_session, user_id=user.id, external_app_id=app.id)
+    db_session.commit()
 
     # One-shot — prevent replay.
     r.delete(redis_key)

@@ -59,6 +59,8 @@ class ApprovalView(BaseModel):
     # Non-empty by construction; sorted strictest-policy-first.
     actions: list[MatchedAction]
     app_name: str
+    # Lets the connect-app card resolve the app (slug/oauth) from the apps list.
+    external_app_id: int | None
     payload: dict[str, Any]
     created_at: datetime
     decision: ApprovalDecision | None

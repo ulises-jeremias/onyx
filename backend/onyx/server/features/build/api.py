@@ -21,6 +21,9 @@ from onyx.server.features.build.scheduled_tasks.api import (
 )
 from onyx.server.features.build.session.api import router as sessions_router
 from onyx.server.features.build.session.messages import router as messages_router
+from onyx.server.features.build.setup_requests.api import (
+    router as setup_requests_router,
+)
 from onyx.server.features.build.user_library.api import router as user_library_router
 from onyx.server.features.build.utils import is_onyx_craft_enabled
 from onyx.utils.logger import setup_logger
@@ -50,6 +53,7 @@ router.include_router(external_apps_router, tags=["build"])
 router.include_router(external_apps_oauth_router, tags=["build"])
 router.include_router(debug_router, tags=["build-debug"])
 router.include_router(approvals_router, tags=["build"])
+router.include_router(setup_requests_router, tags=["build"])
 
 
 # -----------------------------------------------------------------------------

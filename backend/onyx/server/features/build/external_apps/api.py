@@ -29,12 +29,17 @@ from onyx.db.utils import UNSET
 from onyx.error_handling.error_codes import OnyxErrorCode
 from onyx.error_handling.exceptions import OnyxError
 from onyx.external_apps.models import BuiltInExternalAppDescriptor
+from onyx.external_apps.providers.base import OAuthExternalAppProvider
 from onyx.external_apps.providers.registry import action_policy_views
 from onyx.external_apps.providers.registry import fetch_available_built_in_apps
 from onyx.external_apps.providers.registry import get_onyx_managed_provider
+from onyx.external_apps.providers.registry import get_provider_for_app
 from onyx.external_apps.providers.registry import resolve_action_overrides
 from onyx.external_apps.url_glob import UrlGlob
 from onyx.file_store.file_store import get_default_file_store
+from onyx.server.features.build.approvals.connect_app import (
+    approve_connect_app_requests,
+)
 from onyx.server.features.build.external_apps.models import (
     CreateBuiltInExternalAppRequest,
 )
@@ -121,6 +126,7 @@ def _to_user_response(
         credential_keys=required_keys,
         credential_values=credential_values,
         authenticated=authenticated,
+        supports_oauth=isinstance(get_provider_for_app(app), OAuthExternalAppProvider),
     )
 
 
@@ -424,6 +430,12 @@ def upsert_user_credentials(
 
     # Authenticating opens this user's per-user gate; refresh their sandboxes now.
     push_skills_for_users({user.id}, db_session)
+
+    # Resume any agent parked on a connect-app request for this app.
+    approve_connect_app_requests(
+        db_session, user_id=user.id, external_app_id=external_app_id
+    )
+    db_session.commit()
 
 
 @router.get("/apps")

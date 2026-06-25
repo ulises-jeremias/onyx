@@ -147,6 +147,46 @@ def get_external_app_by_skill_id(
     return db_session.scalar(stmt)
 
 
+def get_external_app_by_slug(
+    db_session: Session,
+    slug: str,
+) -> ExternalApp | None:
+    """The external-app gateway whose linked skill has ``slug``, or None.
+
+    The slug is the stable handle surfaced to the agent in AGENTS.md, so it's
+    what the connect tool passes back to identify the app."""
+    from onyx.db.models import Skill
+
+    stmt = (
+        select(ExternalApp)
+        .join(Skill, Skill.id == ExternalApp.skill_id)
+        .options(
+            selectinload(ExternalApp.skill),
+            selectinload(ExternalApp.policies),
+        )
+        .where(Skill.slug == slug)
+    )
+    return db_session.scalar(stmt)
+
+
+def get_connectable_apps_for_user(
+    db_session: Session,
+    user_id: UUID,
+) -> list[ExternalApp]:
+    """Enabled apps the user could connect but hasn't: those requiring per-user
+    credentials the org hasn't pre-filled, with no complete credential row yet.
+
+    Org-credentialed apps (no user-required keys) are usable by everyone and so
+    are excluded — there is nothing for the user to set up."""
+    user_creds_by_app = get_user_credentials_by_app_id(db_session, user_id)
+    return [
+        app
+        for app in get_external_apps(db_session)
+        if app.skill.enabled
+        and not is_user_authenticated_for_app(app, user_creds_by_app.get(app.id))
+    ]
+
+
 def get_external_apps(
     db_session: Session,
 ) -> list[ExternalApp]:

@@ -22,6 +22,8 @@ export interface ApprovalView {
   // Non-empty, sorted strictest-policy-first; actions[0] drove the gate.
   actions: ApprovalAction[];
   app_name: string;
+  // Present for external-app approvals; lets the connect-app card resolve the app.
+  external_app_id: number | null;
   payload: Record<string, unknown>;
   display_payload: Record<string, unknown>;
   created_at: string;

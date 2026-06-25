@@ -107,6 +107,8 @@ class ExternalAppUserResponse(BaseModel):
     credential_keys: list[str]
     credential_values: dict[str, Any]
     authenticated: bool
+    # Drives connect-UI choice: OAuth apps open a popup, others a credential form.
+    supports_oauth: bool
 
 
 class OAuthStartResponse(BaseModel):

@@ -100,7 +100,7 @@ def test_webapp_download_route_not_shadowed_by_catchall(
     admin_user: DATestUser,
 ) -> None:
     """``/webapp-download`` resolves to the zip endpoint, not the catch-all proxy."""
-    session_id = BuildSessionManager.create(admin_user)["id"]
+    session_id = BuildSessionManager.create(admin_user).id
 
     response = client.get(
         f"{API_SERVER_URL}/build/sessions/{session_id}/webapp-download",

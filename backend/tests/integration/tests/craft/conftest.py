@@ -19,13 +19,11 @@ from onyx.server.features.build.configs import SandboxBackend
 from onyx.server.features.build.db.sandbox import get_running_sandboxes
 from onyx.server.features.build.sandbox.factory import get_sandbox_manager
 from shared_configs.configs import POSTGRES_DEFAULT_SCHEMA_STANDARD_VALUE
+from tests.common.craft.users import create_or_login_admin
 from tests.integration.common_utils import http_client
 from tests.integration.common_utils.constants import ADMIN_USER_NAME
-from tests.integration.common_utils.constants import GENERAL_HEADERS
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.managers.llm_provider import LLMProviderManager
-from tests.integration.common_utils.managers.user import build_email
-from tests.integration.common_utils.managers.user import DEFAULT_PASSWORD
 from tests.integration.common_utils.managers.user import UserManager
 from tests.integration.common_utils.test_models import DATestLLMProvider
 from tests.integration.common_utils.test_models import DATestUser
@@ -93,29 +91,6 @@ class _RetryingTransport(httpx.HTTPTransport):
         raise AssertionError("unreachable")
 
 
-def _create_or_login_user(name: str, expected_role: UserRole) -> DATestUser:
-    try:
-        user = UserManager.create(name=name)
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code != 400:
-            raise
-        user = UserManager.login_as_user(
-            DATestUser(
-                id="",
-                email=build_email(name),
-                password=DEFAULT_PASSWORD,
-                headers=GENERAL_HEADERS.copy(),
-                role=expected_role,
-                is_active=True,
-            )
-        )
-    if user.role != expected_role:
-        raise AssertionError(
-            f"Expected {name} to have role {expected_role.value}, got {user.role.value}"
-        )
-    return user
-
-
 @pytest.fixture(scope="session", autouse=True)
 def _test_client() -> Generator[httpx.Client, None, None]:
     """httpx client targeting the real out-of-process api_server."""
@@ -147,7 +122,7 @@ def _start_celery_workers() -> Generator[None, None, None]:
 def _module_reset_and_seed() -> None:
     """Skip the parent's reset_all() (out-of-process downgrade deadlocks against
     the api_server's pooled connections); seed an admin + LLM provider."""
-    admin = _create_or_login_user(ADMIN_USER_NAME, UserRole.ADMIN)
+    admin = create_or_login_admin(ADMIN_USER_NAME, UserRole.ADMIN)
     LLMProviderManager.create(user_performing_action=admin, api_key="test-api-key")
 
 
@@ -174,12 +149,12 @@ def shared_session(
     slug = request.module.__name__.rsplit(".", 1)[-1].replace("_", "-")
     owner = UserManager.create(name=f"craft-shared-{slug}-{uuid4().hex[:8]}")
     body = BuildSessionManager.create(owner)
-    sandbox = body.get("sandbox")
+    sandbox = body.sandbox
     try:
-        yield owner, UUID(body["id"])
+        yield owner, UUID(body.id)
     finally:
-        if sandbox and sandbox.get("id"):
+        if sandbox:
             try:
-                get_sandbox_manager().terminate(UUID(sandbox["id"]))
+                get_sandbox_manager().terminate(UUID(sandbox.id))
             except Exception:
                 pass

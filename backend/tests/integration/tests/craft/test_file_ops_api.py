@@ -16,14 +16,11 @@ from tests.integration.common_utils.test_models import DATestUser
 
 def _create_session_id(user: DATestUser) -> UUID:
     session = BuildSessionManager.create(user)
-    return UUID(session["id"])
+    return UUID(session.id)
 
 
 def _create_session_with_sandbox(user: DATestUser) -> tuple[UUID, UUID]:
-    session = BuildSessionManager.create(user)
-    sandbox = session["sandbox"]
-    assert sandbox is not None, "session create did not return a sandbox"
-    return UUID(session["id"]), UUID(sandbox["id"])
+    return BuildSessionManager.create_with_sandbox(user)
 
 
 def _files_url(session_id: UUID) -> str:

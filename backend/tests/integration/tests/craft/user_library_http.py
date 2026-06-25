@@ -18,7 +18,7 @@ def _url(*parts: str) -> str:
     return f"{API_SERVER_URL}/build/user-library/" + "/".join(parts)
 
 
-def _multipart_headers(user: DATestUser) -> dict[str, str]:
+def multipart_headers(user: DATestUser) -> dict[str, str]:
     """Drop the JSON Content-Type so the client can set the multipart one."""
     return {k: v for k, v in user.headers.items() if k.lower() != "content-type"}
 
@@ -39,7 +39,7 @@ def upload_user_library_files(
         _url("upload"),
         files=multipart,
         data={"path": path},
-        headers=_multipart_headers(user),
+        headers=multipart_headers(user),
         cookies=user.cookies,
     )
 
@@ -54,7 +54,7 @@ def upload_user_library_zip(
         _url("upload-zip"),
         files={"file": (filename, io.BytesIO(zip_bytes), "application/zip")},
         data={"path": path},
-        headers=_multipart_headers(user),
+        headers=multipart_headers(user),
         cookies=user.cookies,
     )
 

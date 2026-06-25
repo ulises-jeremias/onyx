@@ -8,11 +8,12 @@ from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.user_library_http import multipart_headers
 
 
 def _create_session_id(user: DATestUser) -> UUID:
     session = BuildSessionManager.create(user)
-    return UUID(session["id"])
+    return UUID(session.id)
 
 
 def _upload_url(session_id: UUID) -> str:
@@ -40,7 +41,7 @@ def test_upload_over_per_file_cap_returns_400(
 
     # CI lowers BUILD_MAX_UPLOAD_FILE_SIZE_MB to 2; a 3 MiB payload trips it.
     oversized = b"\x00" * (3 * 1024 * 1024)
-    headers = {k: v for k, v in owner.headers.items() if k.lower() != "content-type"}
+    headers = multipart_headers(owner)
     response = client.post(
         _upload_url(session_id),
         files={"file": ("big.txt", oversized, "application/octet-stream")},
@@ -62,9 +63,7 @@ def test_upload_at_count_cap_returns_429(admin_user: DATestUser) -> None:
             content=b"x",
         )
 
-    headers = {
-        k: v for k, v in admin_user.headers.items() if k.lower() != "content-type"
-    }
+    headers = multipart_headers(admin_user)
     response = client.post(
         _upload_url(session_id),
         files={"file": ("file_overflow.txt", b"x", "application/octet-stream")},
@@ -87,9 +86,7 @@ def test_upload_over_cumulative_cap_returns_429(admin_user: DATestUser) -> None:
             content=chunk,
         )
 
-    headers = {
-        k: v for k, v in admin_user.headers.items() if k.lower() != "content-type"
-    }
+    headers = multipart_headers(admin_user)
     response = client.post(
         _upload_url(session_id),
         files={"file": ("chunk_overflow.txt", chunk, "application/octet-stream")},
@@ -103,9 +100,7 @@ def test_upload_accepts_any_extension_via_http(admin_user: DATestUser) -> None:
     """Uploads are not restricted by extension/MIME; a .exe uploads fine."""
     session_id = _create_session_id(admin_user)
 
-    headers = {
-        k: v for k, v in admin_user.headers.items() if k.lower() != "content-type"
-    }
+    headers = multipart_headers(admin_user)
     response = client.post(
         _upload_url(session_id),
         files={"file": ("evil.exe", b"MZ\x90\x00", "application/octet-stream")},
@@ -162,9 +157,7 @@ def test_upload_endpoint_404_for_other_users_session(
     """Uploading to another user's session returns 404 (existence-hiding)."""
     _owner, foreign_session_id = shared_session
 
-    headers = {
-        k: v for k, v in basic_user.headers.items() if k.lower() != "content-type"
-    }
+    headers = multipart_headers(basic_user)
     response = client.post(
         _upload_url(foreign_session_id),
         files={"file": ("hello.txt", b"hi", "application/octet-stream")},

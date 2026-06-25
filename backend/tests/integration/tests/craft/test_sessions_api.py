@@ -41,8 +41,8 @@ def test_set_sharing_scope_changes_webapp_visibility(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_uuid = uuid.UUID(body["id"])
-    webapp_url = f"{API_SERVER_URL}/build/sessions/{body['id']}/webapp"
+    session_uuid = uuid.UUID(body.id)
+    webapp_url = f"{API_SERVER_URL}/build/sessions/{body.id}/webapp"
 
     private_response = client.get(
         webapp_url,
@@ -69,8 +69,9 @@ def test_restore_session_returns_409_when_lock_held(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
-    sandbox_id = body["sandbox"]["id"]
+    session_id = body.id
+    assert body.sandbox is not None
+    sandbox_id = body.sandbox.id
 
     redis_client = get_redis_client(tenant_id=POSTGRES_DEFAULT_SCHEMA_STANDARD_VALUE)
     lock = redis_client.lock(
@@ -119,7 +120,7 @@ def test_list_sessions_only_returns_callers_interactive_sessions(
     mine = BuildSessionManager.create(admin_user)
     BuildSessionManager.start_turn(
         admin_user,
-        uuid.UUID(mine["id"]),
+        uuid.UUID(mine.id),
         "hello",
         client_request_id=f"session-list-{uuid.uuid4()}",
     )
@@ -128,15 +129,15 @@ def test_list_sessions_only_returns_callers_interactive_sessions(
     theirs = BuildSessionManager.create(other_user)
     BuildSessionManager.start_turn(
         other_user,
-        uuid.UUID(theirs["id"]),
+        uuid.UUID(theirs.id),
         "hello",
         client_request_id=f"session-list-{uuid.uuid4()}",
     )
 
     sessions = BuildSessionManager.list_sessions(admin_user)
     ids = {s["id"] for s in sessions}
-    assert mine["id"] in ids
-    assert theirs["id"] not in ids
+    assert mine.id in ids
+    assert theirs.id not in ids
 
 
 def test_delete_session_returns_204_and_actually_deletes(
@@ -144,7 +145,7 @@ def test_delete_session_returns_204_and_actually_deletes(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
+    session_id = body.id
 
     response = client.delete(
         f"{API_SERVER_URL}/build/sessions/{session_id}",
@@ -166,7 +167,7 @@ def test_pre_provisioned_check_returns_valid_for_empty_session(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
+    session_id = body.id
 
     response = client.get(
         f"{API_SERVER_URL}/build/sessions/{session_id}/pre-provisioned-check",
@@ -184,7 +185,7 @@ def test_pre_provisioned_check_returns_invalid_after_first_message(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
+    session_id = body.id
 
     BuildSessionManager.start_turn(
         admin_user,
@@ -209,7 +210,7 @@ def test_rename_session_with_null_name_no_message_uses_id_fallback(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
+    session_id = body.id
 
     response = client.put(
         f"{API_SERVER_URL}/build/sessions/{session_id}/name",
@@ -227,7 +228,7 @@ def test_rename_session_with_null_name_falls_back_when_llm_call_fails(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = body["id"]
+    session_id = body.id
 
     prompt = "hello"
     BuildSessionManager.start_turn(

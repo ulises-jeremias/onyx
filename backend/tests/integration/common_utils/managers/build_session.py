@@ -11,7 +11,9 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from onyx.db.enums import SandboxStatus
 from onyx.db.enums import SharingScope
+from onyx.server.features.build.session.models import DetailedSessionResponse
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.test_models import DATestUser
@@ -37,7 +39,7 @@ class BuildSessionManager:
         *,
         headless: bool = True,
         **kwargs: Any,
-    ) -> dict[str, Any]:
+    ) -> DetailedSessionResponse:
         # The endpoint returns the user's pre-provisioned empty session if
         # one exists. Tests need isolation per call, so delete any existing
         # empty session before creating fresh.
@@ -66,7 +68,26 @@ class BuildSessionManager:
                 f"POST /build/sessions failed: {response.status_code} {response.reason_phrase} "
                 f"— body: {response.text!r} (user_id={user.id}, role={user.role})"
             )
-        return response.json()
+        return DetailedSessionResponse.model_validate(response.json())
+
+    @staticmethod
+    def create_with_sandbox(
+        user: DATestUser,
+        **kwargs: Any,
+    ) -> tuple[UUID, UUID]:
+        """Create a session and return ``(session_id, sandbox_id)``.
+
+        Asserts the response carries a RUNNING sandbox.
+        """
+        session = BuildSessionManager.create(user, **kwargs)
+        sandbox = session.sandbox
+        assert sandbox is not None, (
+            f"session create did not return a sandbox: {session!r}"
+        )
+        assert sandbox.status == SandboxStatus.RUNNING, (
+            f"session create returned a non-RUNNING sandbox: {sandbox!r}"
+        )
+        return UUID(session.id), UUID(sandbox.id)
 
     @staticmethod
     def list_sessions(user: DATestUser) -> list[dict[str, Any]]:

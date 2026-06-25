@@ -16,7 +16,7 @@ def test_send_message_starts_background_turn_and_is_idempotent(
     admin_user: DATestUser,
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = uuid.UUID(body["id"])
+    session_id = uuid.UUID(body.id)
     request_id = f"req-{uuid.uuid4()}"
 
     first = BuildSessionManager.start_turn(
@@ -51,7 +51,7 @@ def test_send_message_rejects_concurrent_active_turn(
     admin_user: DATestUser,
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_id = uuid.UUID(body["id"])
+    session_id = uuid.UUID(body.id)
 
     BuildSessionManager.start_turn(
         admin_user,

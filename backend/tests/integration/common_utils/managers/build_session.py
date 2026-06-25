@@ -9,6 +9,7 @@ Each method calls the API server through the same ``user.headers`` /
 from __future__ import annotations
 
 from typing import Any
+from typing import NamedTuple
 from uuid import UUID
 
 from onyx.db.enums import SandboxStatus
@@ -26,6 +27,11 @@ from onyx.server.features.build.session.models import SnapshotResponse
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.test_models import DATestUser
+
+
+class SessionWithSandbox(NamedTuple):
+    session_id: UUID
+    sandbox_id: UUID
 
 
 def _sessions_url(*parts: str) -> str:
@@ -83,7 +89,7 @@ class BuildSessionManager:
     def create_with_sandbox(
         user: DATestUser,
         **kwargs: Any,
-    ) -> tuple[UUID, UUID]:
+    ) -> SessionWithSandbox:
         """Create a session and return ``(session_id, sandbox_id)``.
 
         Asserts the response carries a RUNNING sandbox.
@@ -96,7 +102,9 @@ class BuildSessionManager:
         assert sandbox.status == SandboxStatus.RUNNING, (
             f"session create returned a non-RUNNING sandbox: {sandbox!r}"
         )
-        return UUID(session.id), UUID(sandbox.id)
+        return SessionWithSandbox(
+            session_id=UUID(session.id), sandbox_id=UUID(sandbox.id)
+        )
 
     @staticmethod
     def list_sessions(user: DATestUser) -> list[SessionResponse]:

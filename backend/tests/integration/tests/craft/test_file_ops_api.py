@@ -11,7 +11,9 @@ from onyx.server.features.build.sandbox.factory import get_sandbox_manager
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
+from tests.integration.common_utils.managers.build_session import SessionWithSandbox
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.conftest import SharedSession
 
 
 def _create_session_id(user: DATestUser) -> UUID:
@@ -19,7 +21,7 @@ def _create_session_id(user: DATestUser) -> UUID:
     return UUID(session.id)
 
 
-def _create_session_with_sandbox(user: DATestUser) -> tuple[UUID, UUID]:
+def _create_session_with_sandbox(user: DATestUser) -> SessionWithSandbox:
     return BuildSessionManager.create_with_sandbox(user)
 
 
@@ -55,7 +57,7 @@ def _seed_file(user: DATestUser, session_id: UUID, name: str = "seed.txt") -> st
 
 
 def test_list_directory_rejects_path_traversal(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -70,7 +72,7 @@ def test_list_directory_rejects_path_traversal(
 
 
 def test_list_directory_returns_200_for_missing_dir(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -85,7 +87,7 @@ def test_list_directory_returns_200_for_missing_dir(
 
 
 def test_list_directory_returns_empty_when_workspace_missing(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
 
@@ -101,7 +103,7 @@ def test_list_directory_returns_empty_when_workspace_missing(
 
 
 def test_read_file_rejects_path_traversal(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -113,7 +115,7 @@ def test_read_file_rejects_path_traversal(
 
 
 def test_delete_file_rejects_path_traversal(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.delete(
@@ -125,7 +127,7 @@ def test_delete_file_rejects_path_traversal(
 
 
 def test_delete_file_rejects_url_encoded_traversal(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.delete(
@@ -141,7 +143,7 @@ def test_delete_file_rejects_url_encoded_traversal(
     [";", "|", "`", "$()", "&"],
 )
 def test_delete_file_rejects_shell_metachars(
-    shared_session: tuple[DATestUser, UUID], metachar: str
+    shared_session: SharedSession, metachar: str
 ) -> None:
     owner, session_id = shared_session
     encoded = quote(f"attachments/foo{metachar}bar.txt", safe="/")
@@ -154,7 +156,7 @@ def test_delete_file_rejects_shell_metachars(
 
 
 def test_delete_file_rejects_null_byte(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.delete(
@@ -166,7 +168,7 @@ def test_delete_file_rejects_null_byte(
 
 
 def test_download_artifact_rejects_path_traversal(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -207,7 +209,7 @@ def test_upload_stats_reflect_uploaded_files(admin_user: DATestUser) -> None:
 
 
 def test_download_directory_zip_respects_traversal_rules(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -219,7 +221,7 @@ def test_download_directory_zip_respects_traversal_rules(
 
 
 def test_pptx_preview_rejects_non_pptx(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     response = client.get(
@@ -231,7 +233,7 @@ def test_pptx_preview_rejects_non_pptx(
 
 
 def test_export_docx_rejects_non_md(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
     # Seed a real .txt so the endpoint reaches the extension check, not "not found".
@@ -289,7 +291,7 @@ def test_list_directory_filters_hidden_entries(
 
 
 def test_cross_user_file_access_returns_404(
-    shared_session: tuple[DATestUser, UUID], admin_user: DATestUser
+    shared_session: SharedSession, admin_user: DATestUser
 ) -> None:
     _owner, session_id = shared_session
 

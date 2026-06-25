@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from uuid import UUID
 
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.managers.user import UserManager
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.conftest import SharedSession
 
 
 def test_send_message_starts_background_turn_and_is_idempotent(
@@ -75,7 +75,7 @@ def test_send_message_rejects_concurrent_active_turn(
 
 
 def test_send_message_404_for_other_users_session(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     _owner, session_id = shared_session
     other_user = UserManager.create(name=f"otheruser-{uuid.uuid4().hex[:8]}")
@@ -91,7 +91,7 @@ def test_send_message_404_for_other_users_session(
 
 
 def test_turn_events_requires_active_turn(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
 

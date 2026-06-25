@@ -11,6 +11,7 @@ from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.conftest import SharedSession
 
 
 def _webapp_url(session_id: UUID, path: str = "") -> str:
@@ -48,7 +49,7 @@ def _auth_get(
 
 
 def test_proxy_requires_auth_when_private(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     """Auth-required surfaces as either 401 or a 302 to /auth/login."""
     owner, session_id = shared_session
@@ -63,7 +64,7 @@ def test_proxy_requires_auth_when_private(
 
 
 def test_proxy_rejects_forged_auth_cookie(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     """A forged cookie resolves to no user; public_org still requires auth."""
     owner, session_id = shared_session
@@ -82,7 +83,7 @@ def test_proxy_rejects_forged_auth_cookie(
 
 
 def test_proxy_no_webapp_port_renders_branded_offline_page(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     # shared_session is headless, so no Next.js port is allocated.
     owner, session_id = shared_session

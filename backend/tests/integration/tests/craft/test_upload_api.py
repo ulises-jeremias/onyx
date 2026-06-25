@@ -8,6 +8,7 @@ from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.conftest import SharedSession
 from tests.integration.tests.craft.user_library_http import multipart_headers
 
 
@@ -35,7 +36,7 @@ def test_upload_endpoint_returns_file_metadata(admin_user: DATestUser) -> None:
 
 
 def test_upload_over_per_file_cap_returns_400(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     owner, session_id = shared_session
 
@@ -137,7 +138,7 @@ def test_upload_with_unicode_filename_persists_correctly(
 
 
 def test_upload_endpoint_requires_auth(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     """POST with no auth token returns 401 (or 403)."""
     _owner, session_id = shared_session
@@ -152,7 +153,7 @@ def test_upload_endpoint_requires_auth(
 
 
 def test_upload_endpoint_404_for_other_users_session(
-    shared_session: tuple[DATestUser, UUID], basic_user: DATestUser
+    shared_session: SharedSession, basic_user: DATestUser
 ) -> None:
     """Uploading to another user's session returns 404 (existence-hiding)."""
     _owner, foreign_session_id = shared_session

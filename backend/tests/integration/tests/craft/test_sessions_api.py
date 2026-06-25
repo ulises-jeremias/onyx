@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from uuid import UUID
 
 from onyx.db.enums import SharingScope
 from onyx.redis.redis_pool import get_redis_client
@@ -17,6 +16,7 @@ from tests.integration.common_utils.managers.user import UserManager
 from tests.integration.common_utils.test_models import DATestLLMProvider
 from tests.integration.common_utils.test_models import DATestSettings
 from tests.integration.common_utils.test_models import DATestUser
+from tests.integration.tests.craft.conftest import SharedSession
 
 
 def test_create_session_returns_200_with_session_and_sandbox_shape(
@@ -100,7 +100,7 @@ def test_create_session_requires_auth() -> None:
 
 
 def test_get_session_404_for_other_users_session(
-    shared_session: tuple[DATestUser, UUID],
+    shared_session: SharedSession,
 ) -> None:
     _owner, session_id = shared_session
 

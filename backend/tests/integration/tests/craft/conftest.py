@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Generator
+from typing import NamedTuple
 from uuid import UUID
 from uuid import uuid4
 
@@ -27,6 +28,11 @@ from tests.integration.common_utils.managers.llm_provider import LLMProviderMana
 from tests.integration.common_utils.managers.user import UserManager
 from tests.integration.common_utils.test_models import DATestLLMProvider
 from tests.integration.common_utils.test_models import DATestUser
+
+
+class SharedSession(NamedTuple):
+    owner: DATestUser
+    session_id: UUID
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -138,7 +144,7 @@ def llm_provider(admin_user: DATestUser) -> DATestLLMProvider:
 @pytest.fixture(scope="module")
 def shared_session(
     request: pytest.FixtureRequest,
-) -> Generator[tuple[DATestUser, UUID], None, None]:
+) -> Generator[SharedSession, None, None]:
     """One provisioned session + sandbox, shared across a module's tests.
 
     Owned by a per-module user isolated from the function-scoped
@@ -151,7 +157,7 @@ def shared_session(
     body = BuildSessionManager.create(owner)
     sandbox = body.sandbox
     try:
-        yield owner, UUID(body.id)
+        yield SharedSession(owner=owner, session_id=UUID(body.id))
     finally:
         if sandbox:
             try:

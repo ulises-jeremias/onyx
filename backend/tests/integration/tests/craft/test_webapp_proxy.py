@@ -90,7 +90,8 @@ def test_proxy_no_webapp_port_renders_branded_offline_page(
 
     response = _auth_get(owner, session_id, follow_redirects=False)
 
-    assert response.status_code in (502, 503, 504)
+    # No Next.js port -> _offline_html_response, which is always 503.
+    assert response.status_code == 503
     assert "text/html" in response.headers.get("content-type", "").lower()
     body = response.text
     assert "Craft" in body

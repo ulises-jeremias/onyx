@@ -60,7 +60,9 @@ def test_set_sharing_scope_changes_webapp_visibility(
         cookies=basic_user.cookies,
         follow_redirects=False,
     )
-    assert public_response.status_code in (200, 502, 503, 504)
+    # Session is headless (no Next.js port), so the proxy renders the branded
+    # offline page; the handler remaps any upstream 502/503/504 to a 503.
+    assert public_response.status_code == 503
     assert "text/html" in public_response.headers.get("content-type", "").lower()
 
 
@@ -96,6 +98,7 @@ def test_create_session_requires_auth() -> None:
         json={},
         headers={"Content-Type": "application/json"},
     )
+    # current_user rejects with 401; require_permission rejects with 403.
     assert response.status_code in (401, 403)
 
 
@@ -265,6 +268,7 @@ def test_limited_role_check_uses_account_type_not_permission_flags(
             headers=anon_user.headers,
             cookies=anon_user.cookies,
         )
+        # current_user rejects with 401; require_permission rejects with 403.
         assert response.status_code in (401, 403)
     finally:
         SettingsManager.update_settings(

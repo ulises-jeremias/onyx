@@ -66,9 +66,10 @@ def test_list_directory_rejects_path_traversal(
         headers=owner.headers,
         cookies=owner.cookies,
     )
-    assert response.status_code in (200, 403)
-    if response.status_code == 200:
-        assert response.json()["entries"] == []
+    # list_directory sanitizes by stripping ".." (never raises traversal), so a
+    # traversal path resolves to a missing dir and returns an empty 200 listing.
+    assert response.status_code == 200
+    assert response.json()["entries"] == []
 
 
 def test_list_directory_returns_200_for_missing_dir(
@@ -111,7 +112,8 @@ def test_read_file_rejects_path_traversal(
         headers=owner.headers,
         cookies=owner.cookies,
     )
-    assert response.status_code in (400, 403, 404)
+    # read_file strips ".." and resolves to a missing file -> 404.
+    assert response.status_code == 404
 
 
 def test_delete_file_rejects_path_traversal(
@@ -123,7 +125,8 @@ def test_delete_file_rejects_path_traversal(
         headers=owner.headers,
         cookies=owner.cookies,
     )
-    assert response.status_code in (403, 404)
+    # delete_file enforces _validate_strict_path: ".." -> 403 Access denied.
+    assert response.status_code == 403
 
 
 def test_delete_file_rejects_url_encoded_traversal(
@@ -176,7 +179,8 @@ def test_download_artifact_rejects_path_traversal(
         headers=owner.headers,
         cookies=owner.cookies,
     )
-    assert response.status_code in (400, 403, 404)
+    # read_file strips ".." and resolves to a missing file -> 404.
+    assert response.status_code == 404
 
 
 def test_upload_stats_empty_session_has_no_attachments(

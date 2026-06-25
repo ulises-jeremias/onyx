@@ -32,19 +32,19 @@ def test_send_message_starts_background_turn_and_is_idempotent(
         client_request_id=request_id,
     )
 
-    assert first["turn_id"] == same["turn_id"]
-    assert first["session_id"] == str(session_id)
-    assert first["status"] in {"QUEUED", "RUNNING"}
-    assert first["turn_index"] == 0
+    assert first.turn_id == same.turn_id
+    assert first.session_id == str(session_id)
+    assert first.status in {"QUEUED", "RUNNING"}
+    assert first.turn_index == 0
 
     active_turn = BuildSessionManager.get_active_turn(admin_user, session_id)
     if active_turn is not None:
-        assert active_turn["turn_id"] == first["turn_id"]
+        assert active_turn.turn_id == first.turn_id
 
     messages = BuildSessionManager.list_messages(admin_user, session_id)
-    user_messages = [msg for msg in messages if msg["type"] == "user"]
+    user_messages = [msg for msg in messages if msg.type == "user"]
     assert len(user_messages) == 1
-    assert user_messages[0]["turn_index"] == 0
+    assert user_messages[0].turn_index == 0
 
 
 def test_send_message_rejects_concurrent_active_turn(

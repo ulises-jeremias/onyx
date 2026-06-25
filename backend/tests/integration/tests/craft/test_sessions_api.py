@@ -135,7 +135,7 @@ def test_list_sessions_only_returns_callers_interactive_sessions(
     )
 
     sessions = BuildSessionManager.list_sessions(admin_user)
-    ids = {s["id"] for s in sessions}
+    ids = {s.id for s in sessions}
     assert mine.id in ids
     assert theirs.id not in ids
 

@@ -13,7 +13,16 @@ from uuid import UUID
 
 from onyx.db.enums import SandboxStatus
 from onyx.db.enums import SharingScope
+from onyx.server.features.build.interactive_turns.models import InteractiveTurnResponse
+from onyx.server.features.build.models import UploadResponse
+from onyx.server.features.build.sandbox.models import DirectoryListing
 from onyx.server.features.build.session.models import DetailedSessionResponse
+from onyx.server.features.build.session.models import MessageListResponse
+from onyx.server.features.build.session.models import MessageResponse
+from onyx.server.features.build.session.models import OpencodeHistorySnapshotResponse
+from onyx.server.features.build.session.models import SessionListResponse
+from onyx.server.features.build.session.models import SessionResponse
+from onyx.server.features.build.session.models import SnapshotResponse
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.test_models import DATestUser
@@ -90,33 +99,27 @@ class BuildSessionManager:
         return UUID(session.id), UUID(sandbox.id)
 
     @staticmethod
-    def list_sessions(user: DATestUser) -> list[dict[str, Any]]:
+    def list_sessions(user: DATestUser) -> list[SessionResponse]:
         response = client.get(
             _sessions_url(),
             headers=user.headers,
             cookies=user.cookies,
         )
         response.raise_for_status()
-        body = response.json()
-        if isinstance(body, dict) and "sessions" in body:
-            sessions = body["sessions"]
-            assert isinstance(sessions, list)
-            return sessions
-        assert isinstance(body, list)
-        return body
+        return SessionListResponse.model_validate(response.json()).sessions
 
     @staticmethod
-    def restore(user: DATestUser, session_id: UUID) -> dict[str, Any]:
+    def restore(user: DATestUser, session_id: UUID) -> DetailedSessionResponse:
         response = client.post(
             _sessions_url(str(session_id), "restore"),
             headers=user.headers,
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        return DetailedSessionResponse.model_validate(response.json())
 
     @staticmethod
-    def create_snapshot(user: DATestUser, session_id: UUID) -> dict[str, Any] | None:
+    def create_snapshot(user: DATestUser, session_id: UUID) -> SnapshotResponse | None:
         """POST /snapshot; ``None`` on 204 (session has no outputs to snapshot)."""
         response = client.post(
             _sessions_url(str(session_id), "snapshot"),
@@ -126,19 +129,19 @@ class BuildSessionManager:
         if response.status_code == 204:
             return None
         response.raise_for_status()
-        return response.json()
+        return SnapshotResponse.model_validate(response.json())
 
     @staticmethod
     def create_opencode_history_snapshot(
         user: DATestUser, session_id: UUID
-    ) -> dict[str, Any]:
+    ) -> OpencodeHistorySnapshotResponse:
         response = client.post(
             _sessions_url(str(session_id), "opencode-history-snapshot"),
             headers=user.headers,
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        return OpencodeHistorySnapshotResponse.model_validate(response.json())
 
     @staticmethod
     def start_turn(
@@ -147,7 +150,7 @@ class BuildSessionManager:
         content: str,
         *,
         client_request_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> InteractiveTurnResponse:
         url = _build_url("sessions", str(session_id), "send-message")
         body: dict[str, Any] = {"content": content}
         if client_request_id is not None:
@@ -159,30 +162,33 @@ class BuildSessionManager:
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        return InteractiveTurnResponse.model_validate(response.json())
 
     @staticmethod
     def get_active_turn(
         user: DATestUser,
         session_id: UUID,
-    ) -> dict[str, Any] | None:
+    ) -> InteractiveTurnResponse | None:
         response = client.get(
             _build_url("sessions", str(session_id), "turns", "active"),
             headers=user.headers,
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        body = response.json()
+        return (
+            InteractiveTurnResponse.model_validate(body) if body is not None else None
+        )
 
     @staticmethod
-    def list_messages(user: DATestUser, session_id: UUID) -> list[dict[str, Any]]:
+    def list_messages(user: DATestUser, session_id: UUID) -> list[MessageResponse]:
         response = client.get(
             _build_url("sessions", str(session_id), "messages"),
             headers=user.headers,
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()["messages"]
+        return MessageListResponse.model_validate(response.json()).messages
 
     @staticmethod
     def upload_file(
@@ -190,7 +196,7 @@ class BuildSessionManager:
         session_id: UUID,
         filename: str,
         content: bytes,
-    ) -> dict[str, Any]:
+    ) -> UploadResponse:
         # File-upload endpoints require multipart; the session cookie still
         # works but Content-Type must be left to ``requests``.
         headers = {k: v for k, v in user.headers.items() if k.lower() != "content-type"}
@@ -201,7 +207,7 @@ class BuildSessionManager:
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        return UploadResponse.model_validate(response.json())
 
     @staticmethod
     def delete_file(
@@ -221,7 +227,7 @@ class BuildSessionManager:
         user: DATestUser,
         session_id: UUID,
         path: str = "",
-    ) -> dict[str, Any]:
+    ) -> DirectoryListing:
         response = client.get(
             _sessions_url(str(session_id), "files"),
             params={"path": path} if path else None,
@@ -229,7 +235,7 @@ class BuildSessionManager:
             cookies=user.cookies,
         )
         response.raise_for_status()
-        return response.json()
+        return DirectoryListing.model_validate(response.json())
 
     @staticmethod
     def download_artifact(

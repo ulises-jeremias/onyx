@@ -29,9 +29,9 @@ def test_upload_endpoint_returns_file_metadata(admin_user: DATestUser) -> None:
         content=b"hello world",
     )
 
-    assert body["filename"] == "hello.txt"
-    assert isinstance(body["path"], str) and body["path"].endswith("hello.txt")
-    assert body["size_bytes"] == len(b"hello world")
+    assert body.filename == "hello.txt"
+    assert isinstance(body.path, str) and body.path.endswith("hello.txt")
+    assert body.size_bytes == len(b"hello world")
 
 
 def test_upload_over_per_file_cap_returns_400(
@@ -124,8 +124,8 @@ def test_upload_with_unicode_filename_persists_correctly(
         filename="héllo wörld 你好.txt",
         content=original_bytes,
     )
-    sanitized_name = upload_response["filename"]
-    relative_path = upload_response["path"]
+    sanitized_name = upload_response.filename
+    relative_path = upload_response.path
 
     assert sanitized_name.endswith(".txt")
     assert relative_path.endswith(sanitized_name)

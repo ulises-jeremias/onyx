@@ -5,10 +5,10 @@ from __future__ import annotations
 import io
 import zipfile
 from collections.abc import Iterable
-from typing import Any
 
 import httpx
 
+from onyx.server.features.build.user_library.api import LibraryEntryResponse
 from tests.integration.common_utils.constants import API_SERVER_URL
 from tests.integration.common_utils.http_client import client
 from tests.integration.common_utils.test_models import DATestUser
@@ -59,16 +59,14 @@ def upload_user_library_zip(
     )
 
 
-def list_user_library_tree(user: DATestUser) -> list[dict[str, Any]]:
+def list_user_library_tree(user: DATestUser) -> list[LibraryEntryResponse]:
     response = client.get(
         _url("tree"),
         headers=user.headers,
         cookies=user.cookies,
     )
     response.raise_for_status()
-    body = response.json()
-    assert isinstance(body, list)
-    return body
+    return [LibraryEntryResponse.model_validate(entry) for entry in response.json()]
 
 
 def delete_user_library_file(user: DATestUser, document_id: str) -> httpx.Response:

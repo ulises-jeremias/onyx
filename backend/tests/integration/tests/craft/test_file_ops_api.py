@@ -51,7 +51,7 @@ def _seed_file(user: DATestUser, session_id: UUID, name: str = "seed.txt") -> st
     body = BuildSessionManager.upload_file(
         user, session_id, filename=name, content=b"seed-content"
     )
-    return str(body["path"])
+    return str(body.path)
 
 
 def test_list_directory_rejects_path_traversal(
@@ -183,7 +183,7 @@ def test_upload_stats_empty_session_has_no_attachments(
     session_id = _create_session_id(admin_user)
 
     listing = BuildSessionManager.list_files(admin_user, session_id, path="attachments")
-    files = [e for e in listing.get("entries", []) if not e["is_directory"]]
+    files = [e for e in listing.entries if not e.is_directory]
     assert files == []
 
 
@@ -200,8 +200,8 @@ def test_upload_stats_reflect_uploaded_files(admin_user: DATestUser) -> None:
     )
 
     listing = BuildSessionManager.list_files(admin_user, session_id, path="attachments")
-    files = [e for e in listing.get("entries", []) if not e["is_directory"]]
-    sizes_by_name = {e["name"]: e["size"] for e in files}
+    files = [e for e in listing.entries if not e.is_directory]
+    sizes_by_name = {e.name: e.size for e in files}
 
     assert sizes_by_name == {"file1.txt": len(first), "file2.txt": len(second)}
 
@@ -279,7 +279,7 @@ def test_list_directory_filters_hidden_entries(
         )
 
     listing = BuildSessionManager.list_files(admin_user, session_id)
-    names = {entry["name"] for entry in listing.get("entries", [])}
+    names = {entry.name for entry in listing.entries}
 
     assert ".venv" not in names
     assert "node_modules" not in names

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import time
 from collections.abc import Generator
 from typing import NamedTuple
 from uuid import UUID
@@ -21,8 +20,9 @@ from onyx.server.features.build.db.sandbox import get_running_sandboxes
 from onyx.server.features.build.sandbox.factory import get_sandbox_manager
 from shared_configs.configs import POSTGRES_DEFAULT_SCHEMA_STANDARD_VALUE
 from tests.common.craft.users import create_or_login_admin
-from tests.integration.common_utils import http_client
 from tests.integration.common_utils.constants import ADMIN_USER_NAME
+from tests.integration.common_utils.http_client import RetryingTransport
+from tests.integration.common_utils.http_client import set_test_client
 from tests.integration.common_utils.managers.build_session import BuildSessionManager
 from tests.integration.common_utils.managers.llm_provider import LLMProviderManager
 from tests.integration.common_utils.managers.user import UserManager
@@ -37,79 +37,47 @@ class SharedSession(NamedTuple):
 
 @pytest.fixture(scope="module", autouse=True)
 def _reap_module_sandboxes() -> Generator[None, None, None]:
-    yield
+    """Safety net for leaked suite sandboxes only.
+
+    Snapshots the RUNNING sandbox IDs at setup and reaps only IDs that appeared
+    during the module, so unrelated sandboxes on a shared cluster are untouched.
+    """
     if SANDBOX_BACKEND != SandboxBackend.DOCKER:
+        yield
         return
     SqlEngine.init_engine(pool_size=2, max_overflow=2)
     with get_session_with_tenant(
         tenant_id=POSTGRES_DEFAULT_SCHEMA_STANDARD_VALUE
     ) as db:
-        running = get_running_sandboxes(db)
+        preexisting = {sandbox.id for sandbox in get_running_sandboxes(db)}
+    yield
+    with get_session_with_tenant(
+        tenant_id=POSTGRES_DEFAULT_SCHEMA_STANDARD_VALUE
+    ) as db:
+        leaked = [
+            sandbox
+            for sandbox in get_running_sandboxes(db)
+            if sandbox.id not in preexisting
+        ]
     manager = get_sandbox_manager()
-    for sandbox in running:
+    for sandbox in leaked:
         with contextlib.suppress(Exception):
             manager.terminate(sandbox.id)
-
-
-_CONNECT_RETRY_EXCEPTIONS = (
-    httpx.ConnectError,
-    httpx.ConnectTimeout,
-    httpx.PoolTimeout,
-)
-_SAFE_RETRY_EXCEPTIONS = (
-    httpx.ReadTimeout,
-    httpx.RemoteProtocolError,
-)
-_RETRY_STATUSES = {502, 504}
-_SAFE_RETRY_METHODS = {"GET", "HEAD", "OPTIONS"}
-_MAX_ATTEMPTS = 3
-
-
-class _RetryingTransport(httpx.HTTPTransport):
-    def handle_request(self, request: httpx.Request) -> httpx.Response:
-        backoff = 0.5
-        for attempt in range(_MAX_ATTEMPTS):
-            last = attempt == _MAX_ATTEMPTS - 1
-            try:
-                response = super().handle_request(request)
-            except _CONNECT_RETRY_EXCEPTIONS:
-                if last:
-                    raise
-                time.sleep(backoff)
-                backoff *= 2
-                continue
-            except _SAFE_RETRY_EXCEPTIONS:
-                if last or request.method.upper() not in _SAFE_RETRY_METHODS:
-                    raise
-                time.sleep(backoff)
-                backoff *= 2
-                continue
-            if (
-                response.status_code in _RETRY_STATUSES
-                and request.method.upper() in _SAFE_RETRY_METHODS
-                and not last
-            ):
-                response.close()
-                time.sleep(backoff)
-                backoff *= 2
-                continue
-            return response
-        raise AssertionError("unreachable")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def _test_client() -> Generator[httpx.Client, None, None]:
     """httpx client targeting the real out-of-process api_server."""
     real_client = httpx.Client(
-        transport=_RetryingTransport(),
+        transport=RetryingTransport(),
         timeout=httpx.Timeout(60.0, connect=10.0),
     )
-    http_client.set_test_client(real_client)
+    set_test_client(real_client)
     try:
         yield real_client
     finally:
         real_client.close()
-        http_client.set_test_client(None)
+        set_test_client(None)
 
 
 @pytest.fixture(scope="session", autouse=True)

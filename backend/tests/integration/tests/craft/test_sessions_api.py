@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import uuid
+from uuid import UUID
+from uuid import uuid4
 
 from onyx.db.enums import SharingScope
 from onyx.redis.redis_pool import get_redis_client
@@ -22,7 +23,7 @@ from tests.integration.tests.craft.conftest import SharedSession
 def test_create_session_returns_200_with_session_and_sandbox_shape(
     llm_provider: DATestLLMProvider,  # noqa: ARG001 — ensures a default LLM exists
 ) -> None:
-    owner = UserManager.create(name=f"craft-session-shape-{uuid.uuid4().hex[:8]}")
+    owner = UserManager.create(name=f"craft-session-shape-{uuid4().hex[:8]}")
     response = client.post(
         f"{API_SERVER_URL}/build/sessions",
         json={"headless": False},
@@ -41,7 +42,7 @@ def test_set_sharing_scope_changes_webapp_visibility(
     llm_provider: DATestLLMProvider,  # noqa: ARG001
 ) -> None:
     body = BuildSessionManager.create(admin_user)
-    session_uuid = uuid.UUID(body.id)
+    session_uuid = UUID(body.id)
     webapp_url = f"{API_SERVER_URL}/build/sessions/{body.id}/webapp"
 
     private_response = client.get(
@@ -107,7 +108,7 @@ def test_get_session_404_for_other_users_session(
 ) -> None:
     _owner, session_id = shared_session
 
-    other_user = UserManager.create(name=f"other-{uuid.uuid4().hex[:8]}")
+    other_user = UserManager.create(name=f"other-{uuid4().hex[:8]}")
     response = client.get(
         f"{API_SERVER_URL}/build/sessions/{session_id}",
         headers=other_user.headers,
@@ -123,18 +124,18 @@ def test_list_sessions_only_returns_callers_interactive_sessions(
     mine = BuildSessionManager.create(admin_user)
     BuildSessionManager.start_turn(
         admin_user,
-        uuid.UUID(mine.id),
+        UUID(mine.id),
         "hello",
-        client_request_id=f"session-list-{uuid.uuid4()}",
+        client_request_id=f"session-list-{uuid4()}",
     )
 
-    other_user = UserManager.create(name=f"other-{uuid.uuid4().hex[:8]}")
+    other_user = UserManager.create(name=f"other-{uuid4().hex[:8]}")
     theirs = BuildSessionManager.create(other_user)
     BuildSessionManager.start_turn(
         other_user,
-        uuid.UUID(theirs.id),
+        UUID(theirs.id),
         "hello",
-        client_request_id=f"session-list-{uuid.uuid4()}",
+        client_request_id=f"session-list-{uuid4()}",
     )
 
     sessions = BuildSessionManager.list_sessions(admin_user)
@@ -192,9 +193,9 @@ def test_pre_provisioned_check_returns_invalid_after_first_message(
 
     BuildSessionManager.start_turn(
         admin_user,
-        uuid.UUID(session_id),
+        UUID(session_id),
         "hello",
-        client_request_id=f"session-list-{uuid.uuid4()}",
+        client_request_id=f"session-list-{uuid4()}",
     )
 
     response = client.get(
@@ -236,9 +237,9 @@ def test_rename_session_with_null_name_falls_back_when_llm_call_fails(
     prompt = "hello"
     BuildSessionManager.start_turn(
         admin_user,
-        uuid.UUID(session_id),
+        UUID(session_id),
         prompt,
-        client_request_id=f"rename-{uuid.uuid4()}",
+        client_request_id=f"rename-{uuid4()}",
     )
 
     response = client.put(

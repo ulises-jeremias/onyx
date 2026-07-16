@@ -116,3 +116,11 @@ Join our open source community on **[Discord](https://discord.gg/TDJ59cGV2X)**!
 ## 💡 Contributing
 
 Looking to contribute? Please check out the [Contribution Guide](CONTRIBUTING.md) for more details.
+
+## 👥 Contributors
+
+<a href="https://github.com/ulises-jeremias/onyx/contributors">
+  <img src="https://contrib.rocks/image?repo=ulises-jeremias/onyx"/>
+</a>
+
+Made with [contributors-img](https://contrib.rocks).
